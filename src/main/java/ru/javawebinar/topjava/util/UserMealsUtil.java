@@ -33,45 +33,59 @@ public class UserMealsUtil {
             else return 0;
         });
 
-        List<UserMealWithExcess> mealsTo = filteredByCycles(meals, LocalTime.of(7, 0), LocalTime.of(12, 0), 2000);
+        List<UserMealWithExcess> mealsTo = filteredByCycles(meals, LocalTime.of(7, 0),
+               LocalTime.of(12, 0), 2000);
         mealsTo.forEach(System.out::println);
-
+        System.out.println(filteredByStreams(meals, LocalTime.of(7, 0),
+               LocalTime.of(12, 0), 2000));
     }
 
-    public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
+    public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime,
+                                                            int caloriesPerDay) {
         List<UserMealWithExcess> filteredMeals = new ArrayList<>();
         int realCaloriesPerDay = 0;
         Map<LocalDate, Integer> map = new TreeMap<>();
         int count = 0;
         for (int i = count; i < meals.size(); i++) {
             for (int j = i; j < meals.size(); j++) {
-                if(meals.get(i).getDateTime().getYear()==meals.get(j).getDateTime().getYear() &&
-                   meals.get(i).getDateTime().getMonth().getValue()==meals.get(j).getDateTime().getMonth().getValue() &&
-                   meals.get(i).getDateTime().getDayOfMonth()==meals.get(j).getDateTime().getDayOfMonth()
-                   )
-                {
-                    realCaloriesPerDay = realCaloriesPerDay + meals.get(j).getCalories();
+                if (meals.get(i).getDateTime().toLocalDate().equals(meals.get(j).getDateTime().toLocalDate())) {
+                    realCaloriesPerDay += meals.get(j).getCalories();
                     count++;
-                }else{
+                } else {
                     break;
                 }
             }
-            map.put(LocalDate.of(meals.get(i).getDateTime().getYear(), meals.get(i).getDateTime().getMonth(), meals.get(i).getDateTime().getDayOfMonth()), realCaloriesPerDay);
+            map.put(meals.get(i).getDateTime().toLocalDate(), realCaloriesPerDay);
             realCaloriesPerDay = 0;
-            i = count-1;
+            i = count - 1;
         }
         for (UserMeal meal : meals) {
-            if (TimeUtil.isBetweenHalfOpen(LocalTime.of(meal.getDateTime().getHour(), meal.getDateTime().getMinute()), startTime, endTime)) {
-                filteredMeals.add(new UserMealWithExcess(meal.getDateTime(), meal.getDescription(), meal.getCalories(), excess(map.get(meal.getDateTime().toLocalDate()), caloriesPerDay)));
+            if (TimeUtil.isBetweenHalfOpen(
+                    LocalTime.of(meal.getDateTime().getHour(), meal.getDateTime().getMinute()), startTime, endTime)
+            ) {
+                filteredMeals.add(new UserMealWithExcess(meal.getDateTime(), meal.getDescription(), meal.getCalories(),
+                        excess(map.get(meal.getDateTime().toLocalDate()), caloriesPerDay)));
             }
         }
         return filteredMeals;
     }
-    public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
 
-        return null;
+    public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
+        List<UserMealWithExcess> filteredMeals = new ArrayList<>();
+        Map<LocalDate, Integer> map = new TreeMap<>();
+        meals.forEach(meal -> map.merge(meal.getDateTime().toLocalDate(), meal.getCalories(), Integer::sum));
+        meals.forEach(meal -> {
+            if (TimeUtil.isBetweenHalfOpen(
+                    LocalTime.of(meal.getDateTime().getHour(), meal.getDateTime().getMinute()), startTime, endTime)
+            ) {
+                filteredMeals.add(new UserMealWithExcess(meal.getDateTime(), meal.getDescription(), meal.getCalories(),
+                        excess(map.get(meal.getDateTime().toLocalDate()), caloriesPerDay)));
+            }
+        });
+        return filteredMeals;
     }
-    public static boolean excess(Integer realCaloriesPerDay, int caloriesPerDay){
+
+    public static boolean excess(int realCaloriesPerDay, int caloriesPerDay) {
         return realCaloriesPerDay > caloriesPerDay;
     }
 }
